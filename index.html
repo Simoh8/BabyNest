@@ -1,0 +1,927 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BabyNest — A Blog for New Parents</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cream: #FDF6EE; --cream-dark: #F5E9D8; --terra: #BF5B2A; --terra-light: #D9795A;
+      --terra-pale: #F4D0BC; --honey: #E8A84C; --honey-pale: #FAEBD0; --amber: #C07830;
+      --brown: #3A1F0D; --stone: #8A6A52; --sand: #EDD9C8; --white: #FFFCF8; --border: #EDD9C8;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--brown); font-size: 16px; line-height: 1.7; overflow-x: hidden; }
+    a { color: inherit; text-decoration: none; transition: all 0.2s; }
+    img { display: block; }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── TOAST ── */
+    #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--brown); color: #fff; padding: .75rem 1.6rem; border-radius: 50px; font-size: .88rem; font-weight: 500; z-index: 9999; transition: transform .35s cubic-bezier(.34,1.56,.64,1); pointer-events: none; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── CONFETTI CANVAS ── */
+    #confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8888; display: none; }
+
+    /* ── POST MODAL ── */
+    #modal-overlay { position: fixed; inset: 0; background: rgba(58,31,13,.55); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(4px); }
+    #modal-overlay.open { display: flex; }
+    #modal-box { background: var(--white); border-radius: 22px; max-width: 680px; width: 100%; max-height: 90vh; overflow-y: auto; animation: modalIn .35s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes modalIn { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-img { width: 100%; height: 260px; object-fit: cover; border-radius: 22px 22px 0 0; filter: sepia(15%) saturate(1.2); }
+    .modal-body { padding: 2rem 2.2rem 2.5rem; }
+    .modal-close { position: sticky; top: 1rem; float: right; background: var(--sand); border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--brown); transition: background .2s; }
+    .modal-close:hover { background: var(--terra-pale); }
+    .modal-body h2 { font-family: 'Playfair Display', serif; font-size: 1.7rem; line-height: 1.25; margin-bottom: .9rem; color: var(--brown); }
+    .modal-body p { font-size: .96rem; color: var(--stone); line-height: 1.8; margin-bottom: 1rem; }
+    .modal-reactions { display: flex; gap: .75rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+    .react-btn { background: var(--cream); border: 1.5px solid var(--border); border-radius: 50px; padding: .4rem 1rem; font-size: .85rem; cursor: pointer; transition: all .2s; color: var(--stone); }
+    .react-btn:hover, .react-btn.active { background: var(--terra-pale); border-color: var(--terra); color: var(--terra); transform: scale(1.05); }
+
+    /* ── NAV ── */
+    nav { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 3rem; position: sticky; top: 0; z-index: 200; display: flex; align-items: center; justify-content: space-between; height: 66px; }
+    .nav-logo { font-family: 'Playfair Display', serif; font-size: 1.65rem; color: var(--terra); letter-spacing: -.3px; cursor: pointer; transition: transform 0.2s; }
+    .nav-logo:hover { transform: scale(1.02); }
+    .nav-logo span { color: var(--honey); }
+    .nav-logo .logo-pulse { display: inline-block; animation: pulse-logo 2.5s ease-in-out infinite; }
+    @keyframes pulse-logo { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a { font-size: .83rem; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; color: var(--stone); transition: color .2s; position: relative; }
+    .nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: var(--terra); transition: width .25s; }
+    .nav-links a:hover { color: var(--terra); }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta { background: var(--terra)!important; color: var(--white)!important; padding: .45rem 1.2rem; border-radius: 50px; animation: cta-pulse 3s ease-in-out infinite; transition: transform 0.2s, box-shadow 0.2s; }
+    .nav-cta:hover { background: var(--terra-light)!important; transform: scale(1.05); box-shadow: 0 4px 14px rgba(191,91,42,0.4); }
+    @keyframes cta-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(191,91,42,.4); } 50% { box-shadow: 0 0 0 8px rgba(191,91,42,0); } }
+
+    /* ── TICKER ── */
+    .ticker { background: var(--honey); overflow: hidden; height: 36px; display: flex; align-items: center; }
+    .ticker-inner { display: flex; gap: 3rem; animation: ticker-scroll 28s linear infinite; white-space: nowrap; padding-left: 100%; }
+    @keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .ticker-item { font-size: .78rem; font-weight: 500; color: var(--brown); display: flex; align-items: center; gap: .5rem; }
+    .ticker-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--terra); flex-shrink: 0; }
+
+    /* ── HERO ── */
+    .hero { display: grid; grid-template-columns: 1fr 1fr; min-height: 560px; overflow: hidden; }
+    .hero-text { display: flex; flex-direction: column; justify-content: center; padding: 4.5rem 3.5rem 4.5rem 4rem; background: var(--white); position: relative; overflow: hidden; }
+    .hero-bg-circle { position: absolute; right: -60px; bottom: -60px; width: 280px; height: 280px; border-radius: 50%; background: var(--honey-pale); opacity: .6; animation: float-circle 6s ease-in-out infinite; }
+    @keyframes float-circle { 0%,100% { transform: scale(1) translateY(0); } 50% { transform: scale(1.08) translateY(-12px); } }
+    .hero-eyebrow { font-size: .73rem; font-weight: 500; text-transform: uppercase; letter-spacing: 2.5px; color: var(--terra); margin-bottom: 1.1rem; }
+    .hero-title { font-family: 'Playfair Display', serif; font-size: 3.3rem; line-height: 1.13; color: var(--brown); margin-bottom: 1.3rem; position: relative; z-index: 1; }
+    .hero-title em { font-style: italic; color: var(--terra); }
+    #hero-typed { border-right: 2px solid var(--terra); animation: blink .7s step-end infinite; }
+    @keyframes blink { 0%,100% { border-color: var(--terra); } 50% { border-color: transparent; } }
+    .hero-desc { font-size: 1.03rem; color: var(--stone); max-width: 400px; margin-bottom: 2.2rem; line-height: 1.8; position: relative; z-index: 1; }
+    .hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; position: relative; z-index: 1; }
+    .btn-primary { background: var(--terra); color: var(--white); padding: .78rem 1.9rem; border-radius: 50px; font-size: .9rem; font-weight: 500; transition: transform .2s, background .2s, box-shadow .2s; display: inline-block; }
+    .btn-primary:hover { background: var(--terra-light); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(191,91,42,0.3); }
+    .btn-outline { border: 1.5px solid var(--terra); color: var(--terra); padding: .78rem 1.9rem; border-radius: 50px; font-size: .9rem; font-weight: 500; transition: all .2s; display: inline-block; }
+    .btn-outline:hover { background: var(--terra); color: var(--white); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(191,91,42,0.2); }
+    .hero-stats { display: flex; gap: 2rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); position: relative; z-index: 1; }
+    .hero-stat strong { display: block; font-size: 1.6rem; font-weight: 500; color: var(--terra); font-family: 'Playfair Display', serif; }
+    .hero-stat span { font-size: .78rem; color: var(--stone); text-transform: uppercase; letter-spacing: .8px; }
+
+    /* hero image */
+    .hero-image { position: relative; overflow: hidden; background: var(--cream-dark); }
+    .hero-image>img { width: 100%; height: 100%; object-fit: cover; filter: sepia(18%) saturate(1.2) brightness(1.03); transition: transform 0.6s; }
+    .hero-image:hover>img { transform: scale(1.03); }
+    .hero-badge { position: absolute; bottom: 2rem; left: 2rem; background: var(--white); border-radius: 14px; padding: .85rem 1.3rem; display: flex; align-items: center; gap: .85rem; box-shadow: 0 6px 24px rgba(58,31,13,.14); animation: badge-float 4s ease-in-out infinite; }
+    @keyframes badge-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .hero-badge-icon { font-size: 1.9rem; }
+    .hero-badge-text strong { display: block; font-size: .9rem; color: var(--brown); }
+    .hero-badge-text span { font-size: .74rem; color: var(--stone); }
+
+    .sticker { position: absolute; font-size: 2rem; animation: sticker-float 5s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(58,31,13,.15)); }
+    .sticker-1 { top: 1.5rem; right: 2rem; animation-delay: 0s; }
+    .sticker-2 { top: 40%; right: 1.5rem; animation-delay: 1.5s; font-size: 1.6rem; }
+    .sticker-3 { top: 2rem; right: 5rem; animation-delay: .8s; font-size: 1.4rem; }
+    @keyframes sticker-float { 0%,100% { transform: translateY(0) rotate(-5deg); } 25% { transform: translateY(-8px) rotate(5deg); } 75% { transform: translateY(4px) rotate(-3deg); } }
+
+    /* ── GIF ROW ── */
+    .gif-row { padding: 2.5rem 4rem; display: flex; gap: 1.5rem; align-items: stretch; overflow-x: auto; background: var(--white); border-bottom: 1px solid var(--border); }
+    .gif-card { flex-shrink: 0; width: 180px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); background: var(--cream); display: flex; flex-direction: column; transition: transform .25s, box-shadow .25s; cursor: pointer; }
+    .gif-card:hover { transform: translateY(-8px) rotate(-1deg); box-shadow: 0 12px 28px rgba(58,31,13,0.12); }
+    .gif-card img { width: 100%; height: 140px; object-fit: cover; }
+    .gif-card .gif-label { padding: .55rem .8rem; font-size: .78rem; font-weight: 500; color: var(--stone); text-align: center; }
+    .gif-anim { width: 100%; height: 140px; display: flex; align-items: center; justify-content: center; background: var(--honey-pale); font-size: 3.5rem; animation: gif-bounce 1.2s ease-in-out infinite; }
+    @keyframes gif-bounce { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-10px) scale(1.1); } }
+
+    /* ── CATEGORIES ── */
+    .categories { background: var(--terra); padding: 1.1rem 4rem; display: flex; gap: 1.5rem; align-items: center; overflow-x: auto; }
+    .categories-label { font-size: .73rem; text-transform: uppercase; letter-spacing: 1.8px; color: rgba(255,255,255,.55); white-space: nowrap; padding-right: 1.5rem; border-right: 1px solid rgba(255,255,255,.2); }
+    .category-pill { background: rgba(255,255,255,.13); color: rgba(255,255,255,.88); padding: .38rem 1.1rem; border-radius: 50px; font-size: .82rem; font-weight: 500; white-space: nowrap; transition: all .22s; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+    .category-pill:hover { background: var(--honey); color: var(--brown); transform: scale(1.06); }
+    .category-pill.active { background: var(--honey); color: var(--brown); transform: scale(1.06); }
+
+    .warm-divider { height: 4px; background: linear-gradient(90deg, var(--terra), var(--honey), var(--terra-pale), var(--honey-pale)); }
+
+    /* ── SECTION ── */
+    .section { padding: 4rem; max-width: 1300px; margin: 0 auto; }
+    .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2.5rem; }
+    .section-title { font-family: 'Playfair Display', serif; font-size: 1.85rem; color: var(--brown); }
+    .see-all { font-size: .85rem; font-weight: 500; color: var(--terra); border-bottom: 1px solid var(--terra); padding-bottom: 1px; transition: all 0.2s; cursor: pointer; }
+    .see-all:hover { color: var(--honey); border-bottom-color: var(--honey); letter-spacing: 0.5px; }
+
+    /* ── FEATURED ── */
+    .featured-card { display: grid; grid-template-columns: 1fr 1fr; background: var(--white); border-radius: 22px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; }
+    .featured-card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(58,31,13,0.1); }
+    .featured-card>.img-wrap { overflow: hidden; }
+    .featured-card>.img-wrap img { width: 100%; height: 100%; object-fit: cover; filter: sepia(18%) saturate(1.2) brightness(1.03); transition: transform .5s; }
+    .featured-card:hover>.img-wrap img { transform: scale(1.05); }
+    .featured-card-body { padding: 2.8rem; display: flex; flex-direction: column; justify-content: center; }
+    .post-tag { display: inline-block; font-size: .7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; padding: .28rem .85rem; border-radius: 50px; margin-bottom: 1.2rem; }
+    .tag-newborn { background: #F9DDD2; color: #9E3E1A; }
+    .tag-sleep { background: #FAF0DC; color: #8A5A0A; }
+    .tag-feeding { background: #FEF4E2; color: #9B6400; }
+    .tag-wellness { background: #F3EDE1; color: #7A5230; }
+    .tag-miles { background: #FDE8D8; color: #B84A18; }
+    .tag-gear { background: #F7E8D2; color: #9A5F1A; }
+    .tag-post { background: #F5DDD0; color: #A03A15; }
+    .featured-card-body h2 { font-family: 'Playfair Display', serif; font-size: 1.95rem; line-height: 1.23; color: var(--brown); margin-bottom: 1rem; }
+    .featured-card-body>p { font-size: .97rem; color: var(--stone); line-height: 1.78; margin-bottom: 1.5rem; }
+    .post-meta { display: flex; align-items: center; gap: .8rem; font-size: .82rem; color: var(--stone); }
+    .post-meta img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .post-meta-sep { color: var(--terra-pale); }
+    .read-more { display: inline-flex; align-items: center; gap: .5rem; color: var(--terra); font-weight: 500; font-size: .9rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); transition: color .2s; cursor: pointer; }
+    .read-more:hover { color: var(--honey); }
+    .read-more svg { transition: transform .2s; }
+    .read-more:hover svg { transform: translateX(4px); }
+
+    /* ── POSTS GRID ── */
+    .posts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.8rem; }
+    .post-card { background: var(--white); border-radius: 18px; overflow: hidden; border: 1px solid var(--border); transition: transform .25s, box-shadow .25s; cursor: pointer; }
+    .post-card[data-cat] { transition: all .35s; }
+    .post-card.hidden { display: none; }
+    .post-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px rgba(58,31,13,.11); }
+    .post-card .img-wrap { overflow: hidden; height: 205px; }
+    .post-card .img-wrap img { width: 100%; height: 100%; object-fit: cover; filter: sepia(15%) saturate(1.15) brightness(1.04); transition: transform .4s, filter .3s; }
+    .post-card:hover .img-wrap img { transform: scale(1.06); filter: sepia(8%) saturate(1.25); }
+    .post-card-body { padding: 1.4rem 1.5rem 1.7rem; }
+    .post-card-body h3 { font-family: 'Playfair Display', serif; font-size: 1.13rem; line-height: 1.35; margin-bottom: .55rem; color: var(--brown); }
+    .post-card-body>p { font-size: .87rem; color: var(--stone); line-height: 1.65; margin-bottom: 1rem; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .like-btn { background: none; border: 1.5px solid var(--border); border-radius: 50px; padding: .28rem .8rem; font-size: .8rem; cursor: pointer; color: var(--stone); transition: all .2s; display: flex; align-items: center; gap: .3rem; }
+    .like-btn:hover { background: var(--terra-pale); border-color: var(--terra); color: var(--terra); transform: scale(1.05); }
+    .like-btn.liked { background: var(--terra-pale); border-color: var(--terra); color: var(--terra); }
+    .like-btn.liked .heart { animation: heart-pop .3s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes heart-pop { 0% { transform: scale(1); } 50% { transform: scale(1.5); } 100% { transform: scale(1); } }
+
+    .new-badge { background: var(--terra); color: #fff; font-size: .65rem; font-weight: 500; padding: .18rem .55rem; border-radius: 50px; text-transform: uppercase; letter-spacing: 1px; vertical-align: middle; margin-left: .4rem; animation: new-pulse 2s ease-in-out infinite; }
+    @keyframes new-pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+
+    /* ── HIGHLIGHT STRIP ── */
+    .highlight-strip { background: var(--honey-pale); padding: 3rem 4rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; border-top: 1px solid var(--sand); border-bottom: 1px solid var(--sand); }
+    .highlight-card { display: flex; gap: 1rem; align-items: flex-start; transition: transform .2s; cursor: pointer; }
+    .highlight-card:hover { transform: translateY(-4px); }
+    .highlight-icon { font-size: 2.2rem; flex-shrink: 0; margin-top: .2rem; animation: wiggle 4s ease-in-out infinite; }
+    .highlight-card:nth-child(2) .highlight-icon { animation-delay: .6s; }
+    .highlight-card:nth-child(3) .highlight-icon { animation-delay: 1.2s; }
+    @keyframes wiggle { 0%,80%,100% { transform: rotate(0); } 85% { transform: rotate(-12deg); } 90% { transform: rotate(10deg); } 95% { transform: rotate(-6deg); } }
+    .highlight-card h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--brown); margin-bottom: .3rem; }
+    .highlight-card p { font-size: .85rem; color: var(--stone); line-height: 1.65; }
+    .hl-link { font-size: .83rem; font-weight: 500; color: var(--terra); margin-top: .5rem; display: inline-block; transition: all 0.2s; }
+    .hl-link:hover { letter-spacing: .5px; color: var(--honey); transform: translateX(4px); }
+
+    /* ── CONTENT + SIDEBAR ── */
+    .content-with-sidebar { display: grid; grid-template-columns: 1fr 310px; gap: 3rem; padding: 4rem; max-width: 1300px; margin: 0 auto; }
+    .sidebar-section { margin-bottom: 2.5rem; }
+    .sidebar-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--brown); margin-bottom: 1.2rem; padding-bottom: .65rem; border-bottom: 2px solid var(--terra-pale); }
+    .sidebar-post { display: flex; gap: .9rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: transform .2s; }
+    .sidebar-post:hover { transform: translateX(6px); }
+    .sidebar-post:last-child { border-bottom: none; }
+    .sidebar-post .img-wrap { width: 68px; height: 68px; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+    .sidebar-post .img-wrap img { width: 100%; height: 100%; object-fit: cover; filter: sepia(15%) saturate(1.15); transition: transform 0.3s; }
+    .sidebar-post:hover .img-wrap img { transform: scale(1.06); }
+    .sidebar-post h4 { font-size: .87rem; font-weight: 500; line-height: 1.38; color: var(--brown); margin-bottom: .25rem; }
+    .sidebar-post span { font-size: .74rem; color: var(--stone); }
+    .tags-cloud { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .tag-btn { font-size: .79rem; padding: .28rem .9rem; border-radius: 50px; border: 1px solid var(--border); color: var(--stone); background: var(--white); cursor: pointer; transition: all .2s; font-family: 'DM Sans', sans-serif; }
+    .tag-btn:hover { border-color: var(--terra); color: var(--terra); background: #FDF0EA; transform: scale(1.06); }
+    .about-box { background: var(--white); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border); transition: transform 0.2s; }
+    .about-box:hover { transform: translateY(-2px); }
+    .about-box-label { font-size: .72rem; text-transform: uppercase; letter-spacing: 1.8px; color: var(--terra); font-weight: 500; margin-bottom: .55rem; }
+    .about-box p { font-size: .89rem; color: var(--stone); line-height: 1.7; }
+
+    /* ── NEWSLETTER ── */
+    .newsletter { background: var(--brown); padding: 4.5rem 4rem; display: flex; align-items: center; justify-content: space-between; gap: 3rem; position: relative; overflow: hidden; }
+    .nl-sparkle { position: absolute; font-size: 1.5rem; opacity: .15; animation: sparkle-drift 8s ease-in-out infinite; }
+    .nl-sparkle:nth-child(1) { top: 1rem; left: 8%; animation-delay: 0s; }
+    .nl-sparkle:nth-child(2) { top: 50%; left: 42%; animation-delay: 2s; font-size: 2.2rem; }
+    .nl-sparkle:nth-child(3) { bottom: 1rem; right: 12%; animation-delay: 4s; }
+    @keyframes sparkle-drift { 0%,100% { transform: translateY(0) scale(1); opacity: .15; } 50% { transform: translateY(-18px) scale(1.2); opacity: .3; } }
+    .newsletter-text { position: relative; z-index: 1; }
+    .newsletter-text h2 { font-family: 'Playfair Display', serif; font-size: 2.1rem; color: var(--white); margin-bottom: .6rem; }
+    .newsletter-accent { color: var(--honey); font-style: italic; }
+    .newsletter-text p { color: rgba(255,255,255,.6); font-size: .97rem; }
+    .newsletter-form { display: flex; gap: .75rem; flex-shrink: 0; position: relative; z-index: 1; }
+    .newsletter-form input { padding: .8rem 1.4rem; border-radius: 50px; border: 1.5px solid rgba(255,255,255,.2); font-family: 'DM Sans', sans-serif; font-size: .9rem; width: 290px; background: rgba(255,255,255,.08); color: var(--white); outline: none; transition: border-color .2s; }
+    .newsletter-form input::placeholder { color: rgba(255,255,255,.4); }
+    .newsletter-form input:focus { border-color: var(--honey); }
+    .newsletter-form button { padding: .8rem 1.9rem; background: var(--terra); color: var(--white); border: none; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: .9rem; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all .2s; }
+    .newsletter-form button:hover { background: var(--terra-light); transform: scale(1.05); box-shadow: 0 4px 16px rgba(191,91,42,0.4); }
+    .nl-success { display: none; background: rgba(255,255,255,.1); border-radius: 14px; padding: 1.2rem 1.8rem; text-align: center; color: var(--white); }
+    .nl-success h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: .4rem; }
+    .nl-success p { font-size: .9rem; color: rgba(255,255,255,.7); }
+
+    /* ── FOOTER ── */
+    footer { background: #2A1508; color: rgba(255,255,255,.65); padding: 3.5rem 4rem 2rem; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; padding-bottom: 2.5rem; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .footer-logo { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--white); margin-bottom: .8rem; display: block; transition: transform 0.2s; }
+    .footer-logo:hover { transform: scale(1.02); }
+    .footer-logo span { color: var(--honey); }
+    .footer-brand p { font-size: .88rem; line-height: 1.75; max-width: 280px; }
+    .footer-col h4 { color: rgba(255,255,255,.9); font-size: .8rem; text-transform: uppercase; letter-spacing: 1.8px; margin-bottom: 1.2rem; }
+    .footer-col ul { list-style: none; }
+    .footer-col ul li { margin-bottom: .6rem; }
+    .footer-col ul li a { font-size: .87rem; color: rgba(255,255,255,.55); transition: color .2s; cursor: pointer; }
+    .footer-col ul li a:hover { color: var(--honey); padding-left: 6px; }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: .81rem; }
+    .social-links { display: flex; gap: 1rem; }
+    .social-link-btn { font-size: 1.2rem; cursor: pointer; transition: transform .2s; display: inline-block; }
+    .social-link-btn:hover { transform: scale(1.25) rotate(-5deg); }
+    .back-to-top { position: fixed; bottom: 2rem; right: 2rem; background: var(--terra); color: #fff; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 1.1rem; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(191,91,42,.4); transition: transform .2s; z-index: 500; }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-4px) scale(1.05); }
+
+    @media(max-width:960px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-image { height: 300px; }
+      .hero-text { padding: 3rem 2rem; }
+      .hero-title { font-size: 2.3rem; }
+      .featured-card { grid-template-columns: 1fr; }
+      .featured-card>.img-wrap { height: 260px; }
+      .posts-grid { grid-template-columns: 1fr 1fr; }
+      .content-with-sidebar { grid-template-columns: 1fr; padding: 2.5rem 1.5rem; }
+      .newsletter { flex-direction: column; padding: 3rem 2rem; }
+      .newsletter-form { flex-direction: column; width: 100%; }
+      .newsletter-form input { width: 100%; }
+      .highlight-strip { grid-template-columns: 1fr; padding: 2rem 2rem; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .section { padding: 3rem 2rem; }
+      nav { padding: 0 1.5rem; }
+      .categories { padding: 1rem 1.5rem; }
+      .gif-row { padding: 2rem 1.5rem; }
+    }
+    @media(max-width:600px) {
+      .posts-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="confetti-canvas"></canvas>
+  <div id="toast"></div>
+  <button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+  <!-- POST MODAL -->
+  <div id="modal-overlay" role="dialog" aria-modal="true">
+    <div id="modal-box">
+      <div class="modal-body" style="padding-top:1rem">
+        <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+        <img id="modal-img" src="" alt="" class="modal-img" style="margin:-1rem -2.2rem 1.5rem;width:calc(100% + 4.4rem)" />
+        <div id="modal-tag"></div>
+        <h2 id="modal-title"></h2>
+        <p id="modal-excerpt"></p>
+        <p id="modal-body-text"></p>
+        <div class="modal-reactions">
+          <button class="react-btn" onclick="reactPost('❤️')">❤️ Love it</button>
+          <button class="react-btn" onclick="reactPost('🙌')">🙌 Helpful</button>
+          <button class="react-btn" onclick="reactPost('💾')">💾 Save</button>
+          <button class="react-btn" onclick="reactPost('📤')">📤 Share</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <nav>
+    <a class="nav-logo" href="#" onclick="scrollTo({top:0,behavior:'smooth'});return false">
+      Baby<span class="logo-pulse">Nest</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#featured" onclick="smoothNav(event,'featured')">Featured</a></li>
+      <li><a href="#latest" onclick="smoothNav(event,'latest')">Latest</a></li>
+      <li><a href="#highlights" onclick="smoothNav(event,'highlights')">Resources</a></li>
+      <li><a href="#about-section" onclick="smoothNav(event,'about-section')">About</a></li>
+      <li><a href="#newsletter" onclick="smoothNav(event,'newsletter')" class="nav-cta">Subscribe</a></li>
+    </ul>
+  </nav>
+
+  <!-- TICKER -->
+  <div class="ticker" aria-label="Latest posts ticker">
+    <div class="ticker-inner" id="ticker-inner"></div>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-text">
+      <div class="hero-bg-circle"></div>
+      <p class="hero-eyebrow">✦ A home for new parents</p>
+      <h1 class="hero-title">
+        Where Every<br><em id="hero-typed"></em>
+      </h1>
+      <p class="hero-desc">Honest guides, heartfelt stories, and trusted advice on newborn care, sleep, feeding, and everything in between.</p>
+      <div class="hero-btns">
+        <a class="btn-primary" href="#featured" onclick="smoothNav(event,'featured')">Start Reading</a>
+        <a class="btn-outline" href="#newsletter" onclick="smoothNav(event,'newsletter')">Join the Newsletter</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><strong id="stat-articles">0</strong><span>Articles</span></div>
+        <div class="hero-stat"><strong id="stat-parents">0</strong><span>Parents</span></div>
+        <div class="hero-stat"><strong id="stat-topics">0</strong><span>Topics</span></div>
+      </div>
+    </div>
+    <div class="hero-image">
+      <img src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1000&auto=format&fit=crop&q=85" alt="Peaceful newborn baby" />
+      <span class="sticker sticker-1">🌟</span>
+      <span class="sticker sticker-2">🍼</span>
+      <span class="sticker sticker-3">💛</span>
+      <div class="hero-badge">
+        <div class="hero-badge-icon">🎀</div>
+        <div class="hero-badge-text">
+          <strong>200+ Articles</strong>
+          <span>Trusted by 50 000 parents</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GIF ROW -->
+  <div class="gif-row" aria-label="Baby moments">
+    <div class="gif-card" onclick="showToast('So cute! 🥰')">
+      <div class="gif-anim">😴</div>
+      <div class="gif-label">Sleepy Snuggles</div>
+    </div>
+    <div class="gif-card" onclick="showToast('Adorable! 🍼')">
+      <div class="gif-anim" style="animation-delay:.3s">😂</div>
+      <div class="gif-label">First Giggles</div>
+    </div>
+    <div class="gif-card" onclick="showToast('First steps! 👣')">
+      <div class="gif-anim" style="animation-delay:.6s">🚶</div>
+      <div class="gif-label">First Steps</div>
+    </div>
+    <div class="gif-card" onclick="showToast('Bath time fun! 🛁')">
+      <div class="gif-anim" style="animation-delay:.9s">🛁</div>
+      <div class="gif-label">Bath Time</div>
+    </div>
+    <div class="gif-card" onclick="showToast('Story time! 📚')">
+      <div class="gif-anim" style="animation-delay:1.2s">📚</div>
+      <div class="gif-label">Story Time</div>
+    </div>
+    <div class="gif-card" onclick="showToast('Peek-a-boo! 👀')">
+      <div class="gif-anim" style="animation-delay:1.5s">👶</div>
+      <div class="gif-label">Peek-a-Boo</div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div class="categories" id="categories">
+    <span class="categories-label">Browse</span>
+    <button class="category-pill active" data-filter="all">All Topics</button>
+    <button class="category-pill" data-filter="newborn">Newborn Care</button>
+    <button class="category-pill" data-filter="sleep">Sleep Training</button>
+    <button class="category-pill" data-filter="feeding">Feeding &amp; Nutrition</button>
+    <button class="category-pill" data-filter="milestones">Milestones</button>
+    <button class="category-pill" data-filter="gear">Baby Gear</button>
+    <button class="category-pill" data-filter="wellness">Wellness</button>
+    <button class="category-pill" data-filter="postpartum">Postpartum</button>
+  </div>
+
+  <div class="warm-divider"></div>
+
+  <!-- FEATURED -->
+  <section class="section" id="featured">
+    <div class="section-header">
+      <h2 class="section-title reveal">Featured Story</h2>
+      <a class="see-all" onclick="smoothNav(event,'latest')">All posts →</a>
+    </div>
+    <div class="featured-card reveal" onclick="openModal('featured')">
+      <div class="img-wrap">
+        <img src="https://images.unsplash.com/photo-1519689680058-324335c77eba?w=800&auto=format&fit=crop&q=85" alt="Mother holding newborn" />
+      </div>
+      <div class="featured-card-body">
+        <span class="post-tag tag-newborn">Newborn Care <span class="new-badge">New</span></span>
+        <h2>The First 72 Hours: What No One Tells You About Bringing Baby Home</h2>
+        <p>Those initial hours after leaving the hospital can feel overwhelming, magical, and terrifying all at once. Here's a real, honest guide to the first three days — from feeding cues to umbilical cord care and everything you weren't warned about.</p>
+        <div class="post-meta">
+          <img src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=80&h=80&auto=format&fit=crop&q=80" alt="Author Sarah Kim" />
+          <span>Sarah Kim</span>
+          <span class="post-meta-sep">·</span>
+          <span>June 14, 2026</span>
+          <span class="post-meta-sep">·</span>
+          <span>8 min read</span>
+        </div>
+        <span class="read-more">
+          Read the full story
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HIGHLIGHT STRIP -->
+  <div class="highlight-strip" id="highlights">
+    <div class="highlight-card reveal" onclick="filterPosts('sleep');smoothNav(event,'latest')">
+      <div class="highlight-icon">🌙</div>
+      <div>
+        <h3>Sleep Guides</h3>
+        <p>Evidence-based methods — from gentle settling to wake-windows — explained clearly.</p>
+        <span class="hl-link">Explore sleep →</span>
+      </div>
+    </div>
+    <div class="highlight-card reveal" style="transition-delay:.1s" onclick="filterPosts('feeding');smoothNav(event,'latest')">
+      <div class="highlight-icon">🥛</div>
+      <div>
+        <h3>Feeding Support</h3>
+        <p>Breastfeeding, formula, combination feeding — honest, non-judgmental advice.</p>
+        <span class="hl-link">Explore feeding →</span>
+      </div>
+    </div>
+    <div class="highlight-card reveal" style="transition-delay:.2s" onclick="filterPosts('milestones');smoothNav(event,'latest')">
+      <div class="highlight-icon">📏</div>
+      <div>
+        <h3>Milestone Tracker</h3>
+        <p>Month-by-month breakdowns from the first smile to wobbly first steps.</p>
+        <span class="hl-link">Track milestones →</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LATEST + SIDEBAR -->
+  <div class="content-with-sidebar" id="latest">
+    <div>
+      <div class="section-header">
+        <h2 class="section-title reveal">Latest Posts</h2>
+      </div>
+      <div class="posts-grid" id="posts-grid">
+
+        <article class="post-card reveal" data-cat="sleep" onclick="openModal('sleep')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&auto=format&fit=crop&q=80" alt="Sleeping baby" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-sleep">Sleep</span>
+            <h3>The 5-Step Gentle Sleep Method That Actually Works at 4 Months</h3>
+            <p>Sleep training doesn't have to mean crying it out. A compassionate approach built around your baby's natural rhythms.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>May 30, 2026</span><span class="post-meta-sep">·</span><span>6 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">24</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="post-card reveal" style="transition-delay:.08s" data-cat="feeding" onclick="openModal('feeding')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1476703993599-0035a21b17a9?w=600&auto=format&fit=crop&q=80" alt="Mother feeding baby" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-feeding">Feeding</span>
+            <h3>Breastfeeding vs. Formula: A Non-Judgmental Guide for 2026</h3>
+            <p>We cut through the noise to give you evidence-based facts, without guilt.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>May 22, 2026</span><span class="post-meta-sep">·</span><span>9 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">41</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="post-card reveal" style="transition-delay:.16s" data-cat="milestones" onclick="openModal('milestones')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1567746758013-578cf7e34e07?w=600&auto=format&fit=crop&q=80" alt="Baby with toys" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-miles">Milestones</span>
+            <h3>Month-by-Month: Baby Development in the First Year</h3>
+            <p>From that first smile at week 6 to wobbly first steps — a warm visual guide.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>May 15, 2026</span><span class="post-meta-sep">·</span><span>12 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">67</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="post-card reveal" style="transition-delay:.24s" data-cat="wellness" onclick="openModal('wellness')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1591348278863-a8fb3887e2aa?w=600&auto=format&fit=crop&q=80" alt="Baby bath time" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-wellness">Wellness</span>
+            <h3>Bath Time Bliss: A Safe Routine for Newborns 0–3 Months</h3>
+            <p>Make bath time a bonding ritual, not a stressful chore. Safety tips included.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>May 8, 2026</span><span class="post-meta-sep">·</span><span>5 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">18</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="post-card reveal" style="transition-delay:.32s" data-cat="gear" onclick="openModal('gear')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=600&auto=format&fit=crop&q=80" alt="Parent with stroller" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-gear">Baby Gear</span>
+            <h3>The 7 Strollers Worth Every Penny in 2026 (Tested by Real Parents)</h3>
+            <p>We tested 20 strollers over 6 months — here are the ones that survived everything.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>May 1, 2026</span><span class="post-meta-sep">·</span><span>10 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">53</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="post-card reveal" style="transition-delay:.4s" data-cat="postpartum" onclick="openModal('postpartum')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1476445704028-a36e0c798192?w=600&auto=format&fit=crop&q=80" alt="Mother resting" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-post">Postpartum</span>
+            <h3>You Just Had a Baby — Here's How to Actually Take Care of Yourself</h3>
+            <p>Postpartum recovery is rarely talked about. Physical healing, mental health, and asking for help.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>Apr 24, 2026</span><span class="post-meta-sep">·</span><span>7 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">89</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="post-card reveal" style="transition-delay:.48s" data-cat="newborn" onclick="openModal('newborn')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=600&auto=format&fit=crop&q=80" alt="Newborn baby" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-newborn">Newborn Care <span class="new-badge">New</span></span>
+            <h3>When Should Baby Start Solid Foods? A Paediatrician Answers</h3>
+            <p>Signs of readiness, what to introduce first, and how to avoid the most common mistakes.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>Apr 10, 2026</span><span class="post-meta-sep">·</span><span>6 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">36</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="post-card reveal" style="transition-delay:.56s" data-cat="sleep" onclick="openModal('swaddle')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1519689680058-324335c77eba?w=600&auto=format&fit=crop&q=80" alt="Swaddled baby" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-sleep">Sleep</span>
+            <h3>How to Swaddle Your Baby: A Step-by-Step Photo Guide</h3>
+            <p>The perfect swaddle means better sleep for everyone. Master the wrap in five easy steps.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>Mar 28, 2026</span><span class="post-meta-sep">·</span><span>4 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">72</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="post-card reveal" style="transition-delay:.64s" data-cat="wellness" onclick="openModal('tummy')">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1567746758013-578cf7e34e07?w=600&auto=format&fit=crop&q=80" alt="Baby tummy time" />
+          </div>
+          <div class="post-card-body">
+            <span class="post-tag tag-wellness">Wellness</span>
+            <h3>Tummy Time: Why, When, and How Long Each Day</h3>
+            <p>Tummy time builds the muscles your baby needs. Here's how to make it fun from day one.</p>
+            <div class="card-footer">
+              <div class="post-meta"><span>Mar 5, 2026</span><span class="post-meta-sep">·</span><span>3 min</span></div>
+              <button class="like-btn" onclick="toggleLike(event,this)"><span class="heart">♥</span> <span class="like-count">29</span></button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside>
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Most Read This Week</h3>
+        <div class="sidebar-post" onclick="openModal('feeding')">
+          <div class="img-wrap"><img src="https://images.unsplash.com/photo-1476703993599-0035a21b17a9?w=200&auto=format&fit=crop&q=75" alt="" /></div>
+          <div><h4>Breastfeeding vs. Formula</h4><span>April 10, 2026 · 9 min</span></div>
+        </div>
+        <div class="sidebar-post" onclick="openModal('swaddle')">
+          <div class="img-wrap"><img src="https://images.unsplash.com/photo-1519689680058-324335c77eba?w=200&auto=format&fit=crop&q=75" alt="" /></div>
+          <div><h4>How to Swaddle: A Step-by-Step Guide</h4><span>March 28, 2026 · 4 min</span></div>
+        </div>
+        <div class="sidebar-post" onclick="openModal('gear')">
+          <div class="img-wrap"><img src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=200&auto=format&fit=crop&q=75" alt="" /></div>
+          <div><h4>The Ultimate Hospital Bag Checklist</h4><span>March 15, 2026 · 5 min</span></div>
+        </div>
+        <div class="sidebar-post" onclick="openModal('tummy')">
+          <div class="img-wrap"><img src="https://images.unsplash.com/photo-1591348278863-a8fb3887e2aa?w=200&auto=format&fit=crop&q=75" alt="" /></div>
+          <div><h4>Tummy Time: Why, When, and How Long</h4><span>March 5, 2026 · 3 min</span></div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Browse by Topic</h3>
+        <div class="tags-cloud">
+          <button class="tag-btn" onclick="filterPosts('newborn');smoothNav(null,'latest')">Newborn</button>
+          <button class="tag-btn" onclick="filterPosts('sleep');smoothNav(null,'latest')">Sleep</button>
+          <button class="tag-btn" onclick="filterPosts('feeding');smoothNav(null,'latest')">Feeding</button>
+          <button class="tag-btn" onclick="showToast('Teething guide coming soon! 🦷')">Teething</button>
+          <button class="tag-btn" onclick="filterPosts('milestones');smoothNav(null,'latest')">Milestones</button>
+          <button class="tag-btn" onclick="filterPosts('postpartum');smoothNav(null,'latest')">Postpartum</button>
+          <button class="tag-btn" onclick="filterPosts('gear');smoothNav(null,'latest')">Baby Gear</button>
+          <button class="tag-btn" onclick="filterPosts('wellness');smoothNav(null,'latest')">Wellness</button>
+          <button class="tag-btn" onclick="showToast('Safety guide coming soon! 🔒')">Safety</button>
+          <button class="tag-btn" onclick="showToast('Travel tips coming soon! ✈️')">Travel</button>
+          <button class="tag-btn" onclick="showToast('Toddler section launching soon! 🧒')">Toddler</button>
+          <button class="tag-btn" onclick="showToast('Nursery ideas coming soon! 🏡')">Nursery</button>
+        </div>
+      </div>
+
+      <div class="about-box" id="about-section">
+        <p class="about-box-label">About BabyNest</p>
+        <p>BabyNest is a parent-written blog sharing real, honest advice on raising babies and toddlers. No sponsored fluff — just stories and science.</p>
+        <a class="read-more" onclick="showToast('Meet the team page coming soon! 👋')" style="padding-top:.9rem;margin-top:.9rem;border-top:1px solid var(--border);display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer">
+          Meet the team
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </aside>
+  </div>
+
+  <!-- NEWSLETTER -->
+  <section class="newsletter" id="newsletter">
+    <span class="nl-sparkle">✨</span>
+    <span class="nl-sparkle">⭐</span>
+    <span class="nl-sparkle">🌟</span>
+    <div class="newsletter-text">
+      <h2>Get Weekly <span class="newsletter-accent">Parenting Wisdom</span></h2>
+      <p>Join 50 000 parents who receive our curated posts every Sunday morning. No spam — unsubscribe any time.</p>
+    </div>
+    <div id="nl-form-wrap">
+      <div class="newsletter-form">
+        <input type="email" id="nl-email" placeholder="Your email address" />
+        <button type="button" onclick="subscribeNewsletter()">Subscribe Free 🎀</button>
+      </div>
+      <div class="nl-success" id="nl-success">
+        <h3>🎉 You're in!</h3>
+        <p>Welcome to the BabyNest family. Check your inbox for a welcome gift!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="footer-logo">Baby<span>Nest</span></span>
+        <p>Honest, compassionate content for parents navigating the beautiful chaos of raising a baby. Written by parents, reviewed by experts.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Topics</h4>
+        <ul>
+          <li><a onclick="filterPosts('newborn');smoothNav(null,'latest')">Newborn Care</a></li>
+          <li><a onclick="filterPosts('sleep');smoothNav(null,'latest')">Sleep Training</a></li>
+          <li><a onclick="filterPosts('feeding');smoothNav(null,'latest')">Feeding</a></li>
+          <li><a onclick="filterPosts('milestones');smoothNav(null,'latest')">Milestones</a></li>
+          <li><a onclick="filterPosts('gear');smoothNav(null,'latest')">Baby Gear</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a onclick="showToast('Downloading free guide… 📥')">Free Guides</a></li>
+          <li><a onclick="showToast('Opening checklist… ✅')">Checklists</a></li>
+          <li><a onclick="showToast('Due date calculator coming soon! 📅')">Due Date Calculator</a></li>
+          <li><a onclick="showToast('Growth tracker coming soon! 📏')">Growth Tracker</a></li>
+          <li><a href="https://www.reddit.com/r/NewParents/" target="_blank" rel="noopener">Community ↗</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a onclick="smoothNav(null,'about-section')">About Us</a></li>
+          <li><a onclick="showToast('Write for us form coming soon! ✍️')">Write for Us</a></li>
+          <li><a onclick="showToast('Advertising info coming soon! 📣')">Advertise</a></li>
+          <li><a onclick="showToast('Privacy policy coming soon! 🔒')">Privacy Policy</a></li>
+          <li><a onclick="showToast('Opening contact form… 📬')">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 BabyNest. Made with ❤️ for parents everywhere.</span>
+      <div class="social-links">
+        <span class="social-link-btn" title="Instagram" onclick="window.open('https://www.instagram.com/explore/tags/newborn/','_blank')">📸</span>
+        <span class="social-link-btn" title="Pinterest" onclick="window.open('https://www.pinterest.com/search/pins/?q=baby+tips','_blank')">📌</span>
+        <span class="social-link-btn" title="Facebook" onclick="window.open('https://www.facebook.com/groups/newparents','_blank')">💬</span>
+        <span class="social-link-btn" title="YouTube" onclick="window.open('https://www.youtube.com/results?search_query=newborn+baby+tips','_blank')">▶️</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    /* ── SMOOTH NAV ── */
+    function smoothNav(e, id) {
+      if (e) e.preventDefault();
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ── TOAST ── */
+    let toastTimer;
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+    }
+
+    /* ── TICKER ── */
+    const tickerItems = [
+      '✨ New: The First 72 Hours Guide',
+      '🌙 5 Sleep Methods That Actually Work',
+      '🍼 Breastfeeding vs Formula — honest answers',
+      '📏 Baby milestones month by month',
+      '🛒 Best strollers of 2026 — tested',
+      '💛 Postpartum recovery: taking care of you',
+      '🛁 Bath time routine for newborns',
+      '📚 Tummy time tips from week one',
+    ];
+    const ticker = document.getElementById('ticker-inner');
+    const doubled = [...tickerItems, ...tickerItems];
+    ticker.innerHTML = doubled.map(t => `<span class="ticker-item"><span class="ticker-dot"></span>${t}</span>`).join('');
+
+    /* ── TYPED HERO ── */
+    const phrases = ['Little Moment\nGets a Story', 'Nap Time\nIs Precious', 'Giggle\nIs a Gift', 'First Word\nIs Magic'];
+    let pi = 0,
+      ci = 0,
+      deleting = false;
+    const el = document.getElementById('hero-typed');
+    function typeWriter() {
+      const full = phrases[pi];
+      if (!deleting) {
+        ci++;
+        el.textContent = full.slice(0, ci);
+        if (ci === full.length) { deleting = true; setTimeout(typeWriter, 2200); return; }
+      } else {
+        ci--;
+        el.textContent = full.slice(0, ci);
+        if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; setTimeout(typeWriter, 400); return; }
+      }
+      setTimeout(typeWriter, deleting ? 45 : 85);
+    }
+    typeWriter();
+
+    /* ── ANIMATED COUNTERS ── */
+    function animateCount(el, target, suffix) {
+      let n = 0,
+        step = Math.ceil(target / 60);
+      const timer = setInterval(() => {
+        n = Math.min(n + step, target);
+        el.textContent = n + (suffix || '');
+        if (n >= target) clearInterval(timer);
+      }, 25);
+    }
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          animateCount(document.getElementById('stat-articles'), 200, '+');
+          animateCount(document.getElementById('stat-parents'), 50, 'k');
+          animateCount(document.getElementById('stat-topics'), 12, '');
+          io.disconnect();
+        }
+      });
+    }, { threshold: .5 });
+    io.observe(document.getElementById('stat-articles'));
+
+    /* ── SCROLL REVEAL ── */
+    const revealObs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, { threshold: .1 });
+    document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+    /* ── BACK TO TOP ── */
+    window.addEventListener('scroll', () => {
+      document.getElementById('back-to-top').classList.toggle('visible', window.scrollY > 600);
+    });
+
+    /* ── CATEGORY FILTER ── */
+    function filterPosts(cat) {
+      document.querySelectorAll('.category-pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.filter === cat || (cat === 'all' && p.dataset.filter === 'all'));
+      });
+      document.querySelectorAll('.post-card').forEach(card => {
+        const show = cat === 'all' || card.dataset.cat === cat;
+        card.style.display = show ? '' : 'none';
+        card.style.animation = show ? 'fadeIn .35s ease' : '';
+      });
+      showToast(cat === 'all' ? 'Showing all posts' : 'Showing: ' + cat);
+    }
+    document.querySelectorAll('.category-pill').forEach(btn => {
+      btn.addEventListener('click', () => { filterPosts(btn.dataset.filter); });
+    });
+    const fadeStyle = document.createElement('style');
+    fadeStyle.textContent = '@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}';
+    document.head.appendChild(fadeStyle);
+
+    /* ── LIKE BUTTONS ── */
+    function toggleLike(e, btn) {
+      e.stopPropagation();
+      btn.classList.toggle('liked');
+      const cEl = btn.querySelector('.like-count');
+      const n = parseInt(cEl.textContent);
+      cEl.textContent = btn.classList.contains('liked') ? n + 1 : n - 1;
+      if (btn.classList.contains('liked')) showToast('Added to your favourites ♥');
+    }
+
+    /* ── POST MODAL DATA ── */
+    const posts = {
+      featured: { img: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-newborn">Newborn Care</span>', title: 'The First 72 Hours: What No One Tells You About Bringing Baby Home', excerpt: 'Those initial hours after leaving the hospital can feel overwhelming, magical, and terrifying all at once.', body: 'From decoding those first feeding cues, managing the umbilical cord stump, understanding newborn sleep patterns, and coping with the emotional roller-coaster of new parenthood — this guide covers it all with honesty and warmth. You are not alone, and you are doing better than you think. 💛' },
+      sleep: { img: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-sleep">Sleep</span>', title: 'The 5-Step Gentle Sleep Method That Actually Works at 4 Months', excerpt: 'Sleep training doesn\'t have to mean leaving your baby to cry alone.', body: 'Step 1: Establish a consistent pre-sleep routine. Step 2: Watch for sleepy cues — yawning, eye rubbing, fussiness. Step 3: Put baby down drowsy but awake. Step 4: Use gentle reassurance without picking up. Step 5: Be consistent for at least 5–7 nights. Most parents see improvement within a week. 🌙' },
+      feeding: { img: 'https://images.unsplash.com/photo-1476703993599-0035a21b17a9?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-feeding">Feeding</span>', title: 'Breastfeeding vs. Formula: A Non-Judgmental Guide for 2026', excerpt: 'The fed-is-best movement is real — here\'s what the evidence says.', body: 'Both breastfeeding and formula feeding are valid, healthy choices. Breastmilk offers immune benefits; modern formula is nutritionally complete. What matters most is a fed, happy baby and a supported, healthy parent. This guide walks you through making a decision without guilt or outside pressure. 🍼' },
+      milestones: { img: 'https://images.unsplash.com/photo-1567746758013-578cf7e34e07?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-miles">Milestones</span>', title: 'Month-by-Month: Baby Development in the First Year', excerpt: 'Every baby is different — but these are the beautiful moments to look forward to.', body: 'Month 1: Focuses on your face. Month 2: First real smile 😊. Month 3: Holds head up. Month 4: Laughs! Month 6: Sits with support, starts solids. Month 9: Crawls, waves, babbles. Month 12: First steps, first words. Remember: wide ranges are normal. Talk to your paediatrician if concerned.' },
+      wellness: { img: 'https://images.unsplash.com/photo-1591348278863-a8fb3887e2aa?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-wellness">Wellness</span>', title: 'Bath Time Bliss: A Safe Routine for Newborns 0–3 Months', excerpt: 'Two to three times per week is plenty — daily baths can dry out delicate skin.', body: 'Use a warm (not hot) shallow bath, support the head at all times, use fragrance-free baby wash, and never leave baby unattended. Turn bath time into a bonding ritual: sing, make eye contact, and enjoy the splashing. Most babies grow to love it! 🛁' },
+      gear: { img: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-gear">Baby Gear</span>', title: 'The 7 Strollers Worth Every Penny in 2026 (Tested by Real Parents)', excerpt: 'Not all strollers are created equal — especially at 6am on a muddy path.', body: 'After 6 months testing with real parents, our top picks balance safety ratings, ease of folding, weight, canopy coverage, and actual longevity. We\'ll tell you which to avoid and which will last through baby #2. Real, unsponsored reviews. 🛒' },
+      postpartum: { img: 'https://images.unsplash.com/photo-1476445704028-a36e0c798192?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-post">Postpartum</span>', title: 'You Just Had a Baby — Here\'s How to Actually Take Care of Yourself', excerpt: 'The 4th trimester is real, and you deserve as much care as your baby.', body: 'Physical recovery takes 6–12 weeks (longer after a C-section). Rest when you can, accept help, eat warm nourishing meals, and talk about how you\'re really feeling. Postpartum mental health matters — if you\'re struggling, please reach out to a GP or midwife. You are not alone. 💛' },
+      newborn: { img: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-newborn">Newborn Care</span>', title: 'When Should Baby Start Solid Foods? A Paediatrician Answers', excerpt: 'The WHO recommends exclusive breastfeeding until 6 months — but every baby is different.', body: 'Signs of readiness: baby can sit with minimal support, shows interest in food, has lost the tongue-thrust reflex. Start with single vegetables or iron-rich purees, one new food every 3 days. Enjoy the mess — it\'s part of the adventure! 🥦' },
+      swaddle: { img: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-sleep">Sleep</span>', title: 'How to Swaddle Your Baby: A Step-by-Step Photo Guide', excerpt: 'A good swaddle mimics the feeling of the womb and helps babies sleep longer stretches.', body: '1. Lay blanket in a diamond, fold top corner down. 2. Place baby with neck at fold. 3. Wrap left side over body, tuck under. 4. Fold bottom up. 5. Wrap right side across and tuck. Check: two fingers fit at the chest, hips can move freely. Stop swaddling when baby shows signs of rolling. 🎀' },
+      tummy: { img: 'https://images.unsplash.com/photo-1567746758013-578cf7e34e07?w=700&auto=format&fit=crop&q=80', tag: '<span class="post-tag tag-wellness">Wellness</span>', title: 'Tummy Time: Why, When, and How Long Each Day', excerpt: 'Tummy time builds the neck, shoulder, and arm strength your baby needs to crawl and walk.', body: 'Start from day one with short 2-3 minute sessions on your chest. By 3 months aim for 30 minutes spread throughout the day. Use a rolled towel under the chest if baby hates it. Get on the floor and interact — tummy time is also play time! 💪' },
+    };
+
+    function openModal(key) {
+      const p = posts[key]; if (!p) return;
+      document.getElementById('modal-img').src = p.img;
+      document.getElementById('modal-tag').innerHTML = p.tag;
+      document.getElementById('modal-title').textContent = p.title;
+      document.getElementById('modal-excerpt').textContent = p.excerpt;
+      document.getElementById('modal-body-text').textContent = p.body;
+      document.getElementById('modal-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    document.getElementById('modal-close').onclick = closeModal;
+    document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    function reactPost(emoji) {
+      const btns = document.querySelectorAll('.react-btn');
+      btns.forEach(b => b.classList.remove('active'));
+      if (event && event.target) event.target.classList.add('active');
+      showToast('Reaction added ' + emoji);
+    }
+
+    /* ── NEWSLETTER ── */
+    function subscribeNewsletter() {
+      const email = document.getElementById('nl-email').value.trim();
+      if (!email || !email.includes('@')) { showToast('Please enter a valid email 📧'); return; }
+      document.querySelector('.newsletter-form').style.display = 'none';
+      document.getElementById('nl-success').style.display = 'block';
+      launchConfetti();
+      showToast('🎉 Welcome to BabyNest!');
+    }
+
+    /* ── CONFETTI ── */
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      canvas.style.display = 'block';
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const colours = ['#BF5B2A', '#E8A84C', '#F4D0BC', '#FAEBD0', '#EDD9C8', '#D9795A'];
+      const pieces = Array.from({ length: 140 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height - canvas.height,
+        r: 4 + Math.random() * 6,
+        c: colours[Math.floor(Math.random() * colours.length)],
+        vx: (Math.random() - .5) * 3,
+        vy: 2 + Math.random() * 4,
+        rot: Math.random() * 360,
+        vr: (Math.random() - .5) * 6
+      }));
+      let frame = 0;
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        pieces.forEach(p => {
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180);
+          ctx.fillStyle = p.c; ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+          ctx.restore();
+          p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        });
+        frame++;
+        if (frame < 180) requestAnimationFrame(draw);
+        else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = 'none'; }
+      }
+      draw();
+    }
+  </script>
+</body>
+</html>
